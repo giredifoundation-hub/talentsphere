@@ -1,69 +1,313 @@
-import Image from "next/image";
+"use client";
+
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+
+type Opportunity = {
+  id: number;
+  title: string;
+  organization: string;
+  category: string;
+  location: string;
+  deadline: string;
+  description: string;
+  requirements: string;
+  applicationLink: string;
+};
 
 export default function Home() {
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    async function loadOpportunities() {
+      const { data, error } = await supabase
+        .from("opportunities")
+        .select("*")
+        .order("id", { ascending: false });
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      const formatted: Opportunity[] = (data || []).map((item) => ({
+        id: item.id,
+        title: item.title,
+        organization: item.organization,
+        category: item.category,
+        location: item.location,
+        deadline: item.deadline,
+        description: item.description,
+        requirements: item.requirements,
+        applicationLink: item.application_link,
+      }));
+
+      setOpportunities(formatted);
+    }
+
+    loadOpportunities();
+  }, []);
+
+  const filteredOpportunities = opportunities.filter((opportunity) => {
+    const term = search.toLowerCase();
+
+    return (
+      opportunity.title.toLowerCase().includes(term) ||
+      opportunity.organization.toLowerCase().includes(term) ||
+      opportunity.category.toLowerCase().includes(term) ||
+      opportunity.location.toLowerCase().includes(term)
+    );
+  });
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
+    <main className="min-h-screen bg-white text-gray-900">
+      {/* Header */}
+      <header className="border-b bg-white">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
+          <a href="/" className="flex items-center">
+  <img
+    src="/logo.jpeg"
+    alt="TalentSphere - Job Opportunities"
+    className="h-14 w-auto object-contain"
+  />
+</a>
+
+          <nav className="hidden gap-6 text-sm font-medium md:flex">
+            <a href="/" className="text-blue-700">
+              Home
+            </a>
+
+            <a href="/jobs" className="hover:text-blue-700">
+              Jobs
+            </a>
+
+            <a href="/grants" className="hover:text-blue-700">
+              Grants
+            </a>
+
+            <a href="/scholarships" className="hover:text-blue-700">
+              Scholarships
+            </a>
+
+            <a href="/fellowships" className="hover:text-blue-700">
+              Fellowships
+            </a>
+          </nav>
+        </div>
+      </header>
+
+      {/* Hero */}
+      <section className="bg-blue-700 px-6 py-20 text-center text-white">
+        <div className="mx-auto max-w-4xl">
+          <h1 className="text-4xl font-bold md:text-5xl">
+            Discover Your Next Opportunity
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+
+          <p className="mx-auto mt-5 max-w-2xl text-lg text-blue-100">
+            Find jobs, grants, scholarships, fellowships, internships,
+            trainings and other opportunities from around the world.
+          </p>
+
+          <div className="mx-auto mt-8 flex max-w-2xl flex-col gap-3 sm:flex-row">
+            <input
+              type="text"
+              placeholder="Search opportunities..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="flex-1 rounded-xl border-2 border-white bg-white px-5 py-4 text-gray-900 shadow-lg outline-none placeholder:text-gray-500 focus:border-gray-200"
+            />
+
+            <button
+              type="button"
+              className="rounded-lg bg-white px-7 py-4 font-semibold text-blue-700 hover:bg-gray-100"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
+              Search
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Categories */}
+      <section className="mx-auto max-w-6xl px-6 py-14">
+        <h2 className="text-center text-3xl font-bold">
+          Explore Opportunities
+        </h2>
+
+        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Jobs */}
+          <a
+            href="/jobs"
+            className="rounded-xl border bg-white p-6 text-center shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+          >
+            <div className="text-4xl">💼</div>
+
+            <h3 className="mt-4 text-xl font-bold">
+              Jobs
+            </h3>
+
+            <p className="mt-2 text-sm text-gray-600">
+              Find local and international jobs
+            </p>
+          </a>
+
+          {/* Grants */}
+          <a
+            href="/grants"
+            className="rounded-xl border bg-white p-6 text-center shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+          >
+            <div className="text-4xl">💰</div>
+
+            <h3 className="mt-4 text-xl font-bold">
+              Grants
+            </h3>
+
+            <p className="mt-2 text-sm text-gray-600">
+              Discover funding opportunities
+            </p>
+          </a>
+
+          {/* Scholarships */}
+          <a
+            href="/scholarships"
+            className="rounded-xl border bg-white p-6 text-center shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+          >
+            <div className="text-4xl">🎓</div>
+
+            <h3 className="mt-4 text-xl font-bold">
+              Scholarships
+            </h3>
+
+            <p className="mt-2 text-sm text-gray-600">
+              Find scholarships for education
+            </p>
+          </a>
+
+          {/* Fellowships */}
+          <a
+            href="/fellowships"
+            className="rounded-xl border bg-white p-6 text-center shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+          >
+            <div className="text-4xl">🌍</div>
+
+            <h3 className="mt-4 text-xl font-bold">
+              Fellowships
+            </h3>
+
+            <p className="mt-2 text-sm text-gray-600">
+              Explore fellowship opportunities
+            </p>
+          </a>
+        </div>
+      </section>
+
+      {/* Latest Opportunities */}
+      <section className="bg-gray-50 px-6 py-14">
+        <div className="mx-auto max-w-6xl">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-3xl font-bold">
+                Latest Opportunities
+              </h2>
+
+              <p className="mt-2 text-gray-600">
+                Recently published opportunities
+              </p>
+            </div>
+
             <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+              href="/jobs"
+              className="font-semibold text-blue-700 hover:underline"
             >
-              Learning
-            </a>{" "}
-            center.
+              View All →
+            </a>
+          </div>
+
+          {filteredOpportunities.length === 0 ? (
+            <div className="mt-8 rounded-xl border bg-white p-10 text-center">
+              <div className="text-4xl">📢</div>
+
+              <h3 className="mt-4 text-xl font-bold">
+                No opportunities published yet
+              </h3>
+
+              <p className="mt-2 text-gray-600">
+                New opportunities will appear here when they are published.
+              </p>
+            </div>
+          ) : (
+            <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+              {filteredOpportunities.map((opportunity) => (
+                <a
+                  key={opportunity.id}
+                  href={`/opportunity/${opportunity.id}`}
+                  className="block rounded-xl border bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+                >
+                  <span className="text-sm font-semibold text-blue-700">
+                    {opportunity.category}
+                  </span>
+
+                  <h3 className="mt-3 text-xl font-bold">
+                    {opportunity.title}
+                  </h3>
+
+                  <p className="mt-2 font-medium text-gray-700">
+                    {opportunity.organization}
+                  </p>
+
+                  <div className="mt-4 space-y-2 text-sm text-gray-600">
+                    <p>📍 {opportunity.location}</p>
+                    <p>📅 Deadline: {opportunity.deadline}</p>
+                  </div>
+
+                  <span className="mt-6 inline-block rounded-lg bg-blue-700 px-5 py-3 font-semibold text-white">
+                    View Opportunity →
+                  </span>
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-gray-900 px-6 py-10 text-white">
+        <div className="mx-auto max-w-6xl text-center">
+          <h2 className="text-2xl font-bold">
+            OPPORTUNITY SPHERE
+          </h2>
+
+          <p className="mt-2 text-gray-400">
+            Connecting people with opportunities.
+          </p>
+
+          <div className="mt-6 flex flex-wrap justify-center gap-5 text-sm text-gray-400">
+            <a href="/about" className="hover:text-white">
+              About Us
+            </a>
+
+            <a href="/contact" className="hover:text-white">
+              Contact
+            </a>
+
+            <a href="/privacy" className="hover:text-white">
+              Privacy Policy
+            </a>
+
+            <a href="/terms" className="hover:text-white">
+              Terms & Conditions
+            </a>
+
+            <a href="/disclaimer" className="hover:text-white">
+              Disclaimer
+            </a>
+          </div>
+
+          <p className="mt-8 text-sm text-gray-500">
+            © 2026 OPPORTUNITY SPHERE. All rights reserved.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+      </footer>
+    </main>
   );
 }
