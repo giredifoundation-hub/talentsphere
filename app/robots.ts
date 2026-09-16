@@ -5,8 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: "/admin/",
     },
-    sitemap: "https://talentsphere.name.ng/sitemap.xml",
+    sitemap: "https://www.talentsphere.name.ng/sitemap.xml",
   };
 }

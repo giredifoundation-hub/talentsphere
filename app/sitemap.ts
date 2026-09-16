@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = "https://talentsphere.name.ng";
+  const baseUrl = "https://www.talentsphere.name.ng";
 
   return [
     {
