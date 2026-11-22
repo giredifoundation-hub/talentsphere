@@ -43,13 +43,22 @@ export default function AdminPage() {
         data: { user },
       } = await supabase.auth.getUser();
 
-      if (!user) {
-        router.push("/admin/login");
-        return;
-      }
+     if (!user) {
+  router.replace("/admin/login");
+  return;
+}
 
-      await loadOpportunities();
-      setLoading(false);
+const { data: isAdmin, error: adminError } =
+  await supabase.rpc("is_opportunities_admin");
+
+if (adminError || isAdmin !== true) {
+  await supabase.auth.signOut();
+  router.replace("/admin/login");
+  return;
+}
+
+await loadOpportunities();
+setLoading(false);
     }
 
     checkUser();

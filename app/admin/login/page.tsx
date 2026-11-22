@@ -23,13 +23,24 @@ export default function AdminLoginPage() {
       password,
     });
 
-    if (error) {
+       if (error) {
       setError(error.message);
       setLoading(false);
       return;
     }
 
-    router.push("/admin");
+    const { data: isAdmin, error: adminError } =
+      await supabase.rpc("is_opportunities_admin");
+
+    if (adminError || isAdmin !== true) {
+      await supabase.auth.signOut();
+
+      setError("Access denied. Admin account required.");
+      setLoading(false);
+      return;
+    }
+
+    router.replace("/admin");
   }
 
   return (
