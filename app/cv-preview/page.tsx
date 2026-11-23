@@ -673,6 +673,14 @@ const formatDate = (date: string | null) => {
 </article>
 
       </div>
+      <div className="mx-auto my-8 flex max-w-4xl justify-center px-4">
+  <a
+    href="/"
+    className="inline-flex items-center justify-center rounded-xl bg-blue-700 px-6 py-3 font-semibold text-white shadow-sm transition hover:bg-blue-800"
+  >
+    ← Back to Homepage
+  </a>
+</div>
     </main>
   );
 }

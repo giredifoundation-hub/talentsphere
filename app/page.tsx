@@ -18,6 +18,30 @@ type Opportunity = {
 export default function Home() {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [search, setSearch] = useState("");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+  let active = true;
+
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (active) {
+      setIsLoggedIn(Boolean(session));
+    }
+  });
+
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange((_event, session) => {
+    if (active) {
+      setIsLoggedIn(Boolean(session));
+    }
+  });
+
+  return () => {
+    active = false;
+    subscription.unsubscribe();
+  };
+}, []);
 
   useEffect(() => {
     async function loadOpportunities() {
@@ -94,6 +118,32 @@ export default function Home() {
               Fellowships
             </a>
           </nav>
+          <div className="flex items-center gap-3">
+  {isLoggedIn ? (
+    <a
+      href="/dashboard"
+      className="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800"
+    >
+      Dashboard
+    </a>
+  ) : (
+    <>
+      <a
+        href="/login"
+        className="text-sm font-semibold text-blue-700 hover:underline"
+      >
+        Login
+      </a>
+
+      <a
+        href="/signup"
+        className="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800"
+      >
+        Sign Up
+      </a>
+    </>
+  )}
+</div>
         </div>
       </header>
 

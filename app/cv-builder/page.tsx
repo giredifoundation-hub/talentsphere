@@ -1394,7 +1394,7 @@ router.push("/cv-preview");
             </p>
 
             <div className="mt-5 inline-block rounded-full bg-blue-100 px-4 py-2 font-bold text-blue-700">
-              Service Fee: â‚¦1,000
+              Service Fee: {"\u20A6"}1,000
             </div>
           </div>
 
