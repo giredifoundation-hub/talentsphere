@@ -2,6 +2,8 @@
 import { getAuthenticatedUser } from "@/lib/auth-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
+const RESERVATION_TIMEOUT_MS = 5 * 60 * 1000;
+
 export async function POST(request: Request) {
   try {
     const user = await getAuthenticatedUser(request);
@@ -31,7 +33,9 @@ export async function POST(request: Request) {
     const { data: payment, error: paymentError } =
       await supabaseAdmin
         .from("cv_payments")
-        .select("id, status, used_at, reserved_at, reservation_id")
+        .select(
+          "id, status, used_at, reserved_at, reservation_id"
+        )
         .eq("reference", reference)
         .eq("user_id", user.id)
         .eq("service_type", "cv_builder")
@@ -49,28 +53,42 @@ export async function POST(request: Request) {
     }
 
     if (payment.status !== "success") {
-  return Response.json({
-    success: true,
-    recovered: false,
-    paymentStatus: payment.status,
-    canRetry: false,
-  });
-}
+      return Response.json({
+        success: true,
+        recovered: false,
+        paymentStatus: payment.status,
+        canRetry: false,
+      });
+    }
 
-if (!payment.used_at) {
-  const hasReservation =
-    payment.reserved_at !== null ||
-    payment.reservation_id !== null;
+    if (!payment.used_at) {
+      const hasReservation =
+        payment.reserved_at !== null ||
+        payment.reservation_id !== null;
 
-  return Response.json({
-    success: true,
-    recovered: false,
-    paymentStatus: hasReservation
-      ? "processing"
-      : "ready_for_retry",
-    canRetry: !hasReservation,
-  });
-}
+      const reservationTime = payment.reserved_at
+        ? Date.parse(payment.reserved_at)
+        : NaN;
+
+      const reservationExpired =
+        payment.reserved_at !== null &&
+        payment.reservation_id !== null &&
+        Number.isFinite(reservationTime) &&
+        Date.now() - reservationTime >
+          RESERVATION_TIMEOUT_MS;
+
+      const canRetry =
+        !hasReservation || reservationExpired;
+
+      return Response.json({
+        success: true,
+        recovered: false,
+        paymentStatus: canRetry
+          ? "ready_for_retry"
+          : "processing",
+        canRetry,
+      });
+    }
 
     const { data: generation, error: generationError } =
       await supabaseAdmin
@@ -90,7 +108,8 @@ if (!payment.used_at) {
       return Response.json(
         {
           success: false,
-          error: "Payment was used, but CV recovery is unavailable.",
+          error:
+            "Payment was used, but CV recovery is unavailable. Please contact support.",
         },
         { status: 409 }
       );
@@ -111,7 +130,9 @@ if (!payment.used_at) {
   } catch (error) {
     console.error("CV payment recovery failed:", {
       errorType:
-        error instanceof Error ? error.name : "UnknownError",
+        error instanceof Error
+          ? error.name
+          : "UnknownError",
     });
 
     return Response.json(
