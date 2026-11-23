@@ -104,9 +104,11 @@ if (transaction?.status !== "success") {
       success: false,
       verified: false,
       paymentStatus:
-        transaction?.status === "failed"
-          ? "failed"
-          : "pending",
+  transaction?.status === "failed"
+    ? "failed"
+    : transaction?.status === "abandoned"
+      ? "abandoned"
+      : "pending",
       error: "Payment has not been confirmed.",
     },
     { status: 400 }

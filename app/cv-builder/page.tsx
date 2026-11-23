@@ -247,8 +247,7 @@ useEffect(() => {
 
 const returnedReference =
   params.get("reference") ||
-  params.get("trxref") ||
-  sessionStorage.getItem("pendingCvPaymentReference");
+  params.get("trxref");
 
   if (!returnedReference) return;
 
@@ -340,13 +339,17 @@ return;
 
 if (!response.ok || result.verified !== true) {
   if (result.paymentStatus === "pending") {
-    showNotification(
-      "Your payment is not yet confirmed. Please wait and return to this page to check again. Do not pay again."
-    );
+  showNotification(
+    "Your payment is not yet confirmed. You can use 'Resume Existing Payment' to continue the same checkout, or 'Check Existing Payment Status' to check again. Do not start a new payment while this one is unresolved."
+  );
   } else if (result.paymentStatus === "failed") {
     showNotification(
       "Paystack reports that this payment failed. No CV generation has started. Please contact support if you were debited."
     );
+    } else if (result.paymentStatus === "abandoned") {
+  showNotification(
+    "Your payment was abandoned. No CV generation has started. You can click 'Review My Information' again to retry payment."
+  );
   } else {
     showNotification(
       "We could not confirm your payment. Please do not pay again until your payment status has been checked."
@@ -869,10 +872,50 @@ const pendingReference = sessionStorage.getItem(
 );
 
 if (pendingReference) {
-  showNotification(
-    "You already have a CV payment in progress. We will check your existing payment. Please do not pay again."
-  );
-  return;
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    showNotification("Please log in to check your existing payment.");
+    return;
+  }
+
+  try {
+    const response = await fetch("/api/payments/verify", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ reference: pendingReference }),
+    });
+
+    const result = await response.json();
+
+   if (
+  response.status === 400 &&
+  (result.paymentStatus === "abandoned" ||
+    result.paymentStatus === "failed")
+) {
+      sessionStorage.removeItem("pendingCvPaymentReference");
+      sessionStorage.removeItem("pendingCvPaymentUrl");
+
+      showNotification(
+  "Your previous payment was not completed. You can try again."
+);
+    } else {
+      showNotification(
+        "Your previous payment may still be active or successful. Please check its status before paying again."
+      );
+      return;
+    }
+  } catch {
+    showNotification(
+      "Unable to check your previous payment. Please try again later."
+    );
+    return;
+  }
 }
   const { data, error } = await supabase
     .from("cv_profiles")
@@ -1116,9 +1159,8 @@ const existingPaymentReference = sessionStorage.getItem(
 
 if (existingPaymentReference) {
   showNotification(
-    "You already have a CV payment in progress. Please wait while we check your existing payment. Do not pay again."
+    "An existing payment needs to be checked before starting another. Please use Check Existing Payment Status."
   );
-
   return;
 }
 const paymentResponse = await fetch("/api/payments/initialize", {
