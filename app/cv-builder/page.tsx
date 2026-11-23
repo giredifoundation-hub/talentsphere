@@ -1,6 +1,8 @@
-"use client";
-
-import { useEffect, useState } from "react";
+﻿"use client";
+import Notification, {
+  type NotificationType,
+} from "@/components/Notification";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
@@ -82,7 +84,17 @@ export default function CVBuilderPage() {
   const [location, setLocation] = useState("");
   const [linkedin, setLinkedin] = useState("");
   const [portfolio, setPortfolio] = useState("");
+const [notification, setNotification] = useState<{
+  message: string;
+  type: NotificationType;
+} | null>(null);
 
+const showNotification = (
+  message: string,
+  type: NotificationType = "info"
+) => {
+  setNotification({ message, type });
+};
   const [experiences, setExperiences] = useState<Experience[]>([
     {
       jobTitle: "",
@@ -139,6 +151,12 @@ const [roleDescriptions, setRoleDescriptions] = useState<
   const [jobDescription, setJobDescription] = useState("");
 const [jobApplicationLink, setJobApplicationLink] = useState("");
 const [isReadingJob, setIsReadingJob] = useState(false);
+const [showReplaceJobModal, setShowReplaceJobModal] = useState(false);
+const [showReviewModal, setShowReviewModal] = useState(false);
+const [cvProgress, setCvProgress] = useState<
+  "idle" | "verifying" | "generating" | "preparing" | "error"
+>("idle");
+const reviewConfirmedRef = useRef(false);
 const [refereeMode, setRefereeMode] = useState<
   "request" | "provide"
 >("request");
@@ -255,17 +273,25 @@ if (sessionStorage.getItem(processingKey) === "true") {
 
 sessionStorage.setItem(processingKey, "true");
  const verifyReturnedPayment = async () => {
+  setCvProgress("verifying");
+
   try {
     const {
       data: { session },
       error: sessionError,
     } = await supabase.auth.getSession();
 
-    if (sessionError || !session) {
-      console.error("Please log in to verify your payment.");
-      return;
-    }
+   if (sessionError || !session) {
+  console.error("Please log in to verify your payment.");
 
+  showNotification(
+    "Your login session has expired. Please log in again to check your payment. Do not pay again.",
+    "error"
+  );
+
+  setCvProgress("error");
+  return;
+}
     const response = await fetch("/api/payments/verify", {
       method: "POST",
       headers: {
@@ -304,32 +330,35 @@ sessionStorage.setItem(processingKey, "true");
   }
 
   console.error(
-    "Payment could not be verified or recovered.",
-    recoveryResult.error || result.error
-  );
-  return;
+  "Payment could not be verified or recovered.",
+  recoveryResult.error || result.error
+);
+
+setCvProgress("error");
+return;
 }
 
 if (!response.ok || result.verified !== true) {
   if (result.paymentStatus === "pending") {
-    alert(
+    showNotification(
       "Your payment is not yet confirmed. Please wait and return to this page to check again. Do not pay again."
     );
   } else if (result.paymentStatus === "failed") {
-    alert(
+    showNotification(
       "Paystack reports that this payment failed. No CV generation has started. Please contact support if you were debited."
     );
   } else {
-    alert(
+    showNotification(
       "We could not confirm your payment. Please do not pay again until your payment status has been checked."
     );
   }
 
-  console.error(
-    "Payment verification failed:",
-    result.error || "Payment has not been confirmed."
-  );
-  return;
+ console.error(
+  "Payment verification failed:",
+  result.error || "Payment has not been confirmed."
+);
+setCvProgress("error");
+return;
 }
 
    const recoveryResponse = await fetch("/api/payments/recover", {
@@ -351,30 +380,33 @@ if (!recoveryResponse.ok || recoveryResult.success !== true) {
     recoveryResult.error || "Recovery check failed."
   );
 
-  alert(
-    "We could not check your existing CV payment. " +
-    "Please do not pay again. Contact TalentSphere support."
-  );
-  return;
+  showNotification(
+  "We could not check your existing CV payment. " +
+  "Please do not pay again. Contact TalentSphere support."
+);
+setCvProgress("error");
+return;
 }
 
 if (recoveryResult.paymentStatus === "processing") {
-  alert(
-    "Your payment is confirmed, but CV generation may still be processing. " +
-    "Please wait and check again. Do not pay again."
-  );
-  return;
+ showNotification(
+  "Your payment is confirmed, but CV generation may still be processing. " +
+  "Please wait and check again. Do not pay again."
+);
+setCvProgress("error");
+return;
 }
 
 if (
   recoveryResult.recovered !== true &&
   recoveryResult.canRetry !== true
 ) {
-  alert(
-    "Your payment is not ready for CV generation. " +
-    "Please check its status or contact TalentSphere support. Do not pay again."
-  );
-  return;
+ showNotification(
+  "Your payment is not ready for CV generation. " +
+  "Please check its status or contact TalentSphere support. Do not pay again."
+);
+setCvProgress("error");
+return;
 }
 
 if (recoveryResult.recovered === true) {
@@ -400,16 +432,17 @@ if (
     "CV draft or profile ID is missing. Payment recovery requires assistance."
   );
 
-  alert(
-    "Your payment information has been found, but your CV details are missing from this browser. Please contact TalentSphere support with your payment reference. Do not pay again. Reference: " +
-      returnedReference
-  );
+  showNotification(
+  "Your payment information has been found, but your CV details are missing from this browser. Please contact TalentSphere support with your payment reference. Do not pay again. Reference: " +
+    returnedReference
+);
 
-  return;
+setCvProgress("error");
+return;
 }
 
 const draft = JSON.parse(savedDraft) as CVBuilderDraft;
-
+setCvProgress("generating");
 const aiResponse = await fetch("/api/ai/generate-cv", {
   method: "POST",
   headers: {
@@ -437,25 +470,28 @@ const aiResponse = await fetch("/api/ai/generate-cv", {
 });
 
 const aiResult = await aiResponse.json();
-
 if (!aiResponse.ok || aiResult.success !== true) {
   console.error(
     "CV generation failed:",
     aiResult.error || "Unknown error"
   );
 
-  alert(
+  showNotification(
     "Your payment has been verified, but CV preparation is not complete. " +
     "Please click 'Check Existing Payment Status' to check for your CV " +
-    "or retry generation using the same payment. Do not pay again."
+    "or retry generation using the same payment. Do not pay again.",
+    "error"
   );
 
+  setCvProgress("error");
   return;
 }
 sessionStorage.removeItem("pendingCvPaymentUrl");
+setCvProgress("preparing");
 router.replace("/cv-preview");
-  } catch (error) {
+} catch (error) {
   console.error("Unable to verify returned payment:", error);
+  setCvProgress("error");
 } finally {
   sessionStorage.removeItem(processingKey);
 }
@@ -469,12 +505,12 @@ const handleCheckCvPaymentStatus = () => {
   );
 
   if (!pendingReference) {
-    alert("No existing CV payment was found.");
+    showNotification("No existing CV payment was found.");
     return;
   }
 
   if (!/^ts_cv_[0-9a-f-]{36}$/.test(pendingReference)) {
-    alert("Invalid payment reference. Please contact TalentSphere support.");
+    showNotification("Invalid payment reference. Please contact TalentSphere support.");
     return;
   }
 
@@ -492,12 +528,12 @@ const handleResumeCvPayment = () => {
   );
 
   if (!pendingReference) {
-    alert("No pending CV payment was found.");
+    showNotification("No pending CV payment was found.");
     return;
   }
 
   if (!pendingUrl) {
-    alert(
+    showNotification(
       "Your payment checkout link is unavailable. Please contact TalentSphere support before paying again."
     );
     return;
@@ -515,25 +551,23 @@ const handleResumeCvPayment = () => {
 
     window.location.assign(checkoutUrl.href);
   } catch {
-    alert(
+    showNotification(
       "Your saved payment link is invalid. Please contact TalentSphere support. Do not pay again."
     );
   }
 };
+const skipJobReplaceConfirmationRef = useRef(false);
 const handleReadJobLink = async () => {
   if (!jobApplicationLink.trim()) {
-    alert("Please paste a job application link first.");
+    showNotification("Please paste a job application link first.");
     return;
   }
-if (jobDescription.trim()) {
-  const confirmed = window.confirm(
-    "Reading this job link will replace your existing job description. Do you want to continue?"
-  );
-
-  if (!confirmed) {
-    return;
-  }
+if (jobDescription.trim() && !skipJobReplaceConfirmationRef.current) {
+  setShowReplaceJobModal(true);
+  return;
 }
+
+skipJobReplaceConfirmationRef.current = false;
   setIsReadingJob(true);
 
   try {
@@ -592,9 +626,9 @@ setRoleDescriptions(
     : []
 );
 setSelectedJobRole("");
-    alert("Job description loaded successfully!");
+    showNotification("Job description loaded successfully!");
   } catch (error) {
-    alert(
+    showNotification(
       error instanceof Error
         ? error.message
         : "Something went wrong while reading the job link."
@@ -770,11 +804,19 @@ function removeReferee(index: number) {
     setLanguages((items) => items.filter((_, i) => i !== index));
   }
 
- async function handleSubmit(e: React.FormEvent) {
+async function handleSubmit(e: React.FormEvent) {
   e.preventDefault();
+
+  if (!reviewConfirmedRef.current) {
+  setShowReviewModal(true);
+  return;
+}
+
+reviewConfirmedRef.current = false;
+setShowReviewModal(false);
 if (refereeMode === "provide") {
   if (referees.length < 2 || referees.length > 3) {
-    alert("Please provide 2 or 3 referees.");
+    showNotification("Please provide 2 or 3 referees.");
     return;
   }
 
@@ -788,26 +830,26 @@ if (refereeMode === "provide") {
   );
 
   if (incompleteReferee) {
-    alert("Please complete all referee details.");
+    showNotification("Please complete all referee details.");
     return;
   }
 }
   if (!fullName.trim() || !email.trim()) {
-    alert("Please provide your full name and email.");
+    showNotification("Please provide your full name and email.");
     return;
   }
 
   if (!phone.trim() || !location.trim()) {
-    alert("Please provide your phone number and location.");
+    showNotification("Please provide your phone number and location.");
     return;
   }
 
   if (!jobTitle.trim() || !jobDescription.trim()) {
-    alert("Please provide the job title and job description.");
+    showNotification("Please provide the job title and job description.");
     return;
   }
 if (availableJobRoles.length > 1 && !selectedJobRole) {
-  alert(
+  showNotification(
     "Please select the job role you are applying for before generating your CV."
   );
   return;
@@ -818,7 +860,7 @@ if (availableJobRoles.length > 1 && !selectedJobRole) {
   } = await supabase.auth.getUser();
 
   if (userError || !user) {
-    alert("Please log in before creating your CV.");
+    showNotification("Please log in before creating your CV.");
     router.push("/login");
     return;
   }
@@ -827,7 +869,7 @@ const pendingReference = sessionStorage.getItem(
 );
 
 if (pendingReference) {
-  alert(
+  showNotification(
     "You already have a CV payment in progress. We will check your existing payment. Please do not pay again."
   );
   return;
@@ -851,7 +893,7 @@ if (pendingReference) {
 
   if (error) {
     console.error("CV profile insert error:", error);
-    alert(`Could not save your CV information: ${error.message}`);
+    showNotification(`Could not save your CV information: ${error.message}`);
     return;
   }
 
@@ -894,7 +936,7 @@ if (experienceRows.length > 0) {
       experienceError
     );
 
-    alert(
+    showNotification(
       `CV profile was saved, but work experience could not be saved: ${experienceError.message}`
     );
 
@@ -931,7 +973,7 @@ if (educationRows.length > 0) {
       educationError
     );
 
-    alert(
+    showNotification(
       `CV profile was saved, but education could not be saved: ${educationError.message}`
     );
 
@@ -963,7 +1005,7 @@ if (certificationRows.length > 0) {
       certificationError
     );
 
-    alert(
+    showNotification(
       `CV profile was saved, but certifications could not be saved: ${certificationError.message}`
     );
 
@@ -995,7 +1037,7 @@ if (projectRows.length > 0) {
       projectError
     );
 
-    alert(
+    showNotification(
       `CV profile was saved, but projects could not be saved: ${projectError.message}`
     );
 
@@ -1021,7 +1063,7 @@ if (languageRows.length > 0) {
       languageError
     );
 
-    alert(
+    showNotification(
       `CV profile was saved, but languages could not be saved: ${languageError.message}`
     );
 
@@ -1046,7 +1088,7 @@ if (refereeMode === "provide") {
   if (refereeError) {
     console.error("Referee insert error:", refereeError);
 
-    alert(
+    showNotification(
       `CV information was saved, but referees could not be saved: ${refereeError.message}`
     );
 
@@ -1059,11 +1101,11 @@ const {
 } = await supabase.auth.getSession();
 
 if (sessionError || !session?.access_token) {
-  alert("Please log in before generating your CV.");
+  showNotification("Please log in before generating your CV.");
   return;
 }
 if (!saveCVPaymentDraft()) {
-  alert(
+  showNotification(
     "Unable to save your CV draft. Payment has not been started. Please try again."
   );
   return;
@@ -1073,7 +1115,7 @@ const existingPaymentReference = sessionStorage.getItem(
 );
 
 if (existingPaymentReference) {
-  alert(
+  showNotification(
     "You already have a CV payment in progress. Please wait while we check your existing payment. Do not pay again."
   );
 
@@ -1094,12 +1136,21 @@ if (
   typeof paymentResult.authorizationUrl !== "string" ||
   typeof paymentResult.reference !== "string"
 ) {
-  alert("Unable to prepare CV Builder payment. Please try again.");
+console.error("Payment initialization failed:", {
+  status: paymentResponse.status,
+  result: paymentResult,
+});
+
+showNotification(
+  paymentResult.error ||
+  paymentResult.message ||
+  "Unable to prepare CV Builder payment. Please try again."
+);
   return;
 }
 
 if (!/^ts_cv_[0-9a-f-]{36}$/.test(paymentResult.reference)) {
-  alert("Invalid payment reference. Please try again.");
+  showNotification("Invalid payment reference. Please try again.");
   return;
 }
 
@@ -1108,7 +1159,7 @@ let checkoutUrl: URL;
 try {
   checkoutUrl = new URL(paymentResult.authorizationUrl);
 } catch {
-  alert("Invalid payment checkout URL.");
+  showNotification("Invalid payment checkout URL.");
   return;
 }
 
@@ -1116,7 +1167,7 @@ if (
   checkoutUrl.protocol !== "https:" ||
   checkoutUrl.hostname !== "checkout.paystack.com"
 ) {
-  alert("Untrusted payment checkout URL.");
+  showNotification("Untrusted payment checkout URL.");
   return;
 }
 sessionStorage.setItem(
@@ -1132,9 +1183,6 @@ sessionStorage.setItem(
 sessionStorage.setItem(
   "pendingCvPaymentUrl",
   paymentResult.authorizationUrl
-);
-alert(
-  "Your CV draft has been saved. You will now be redirected to secure Paystack checkout."
 );
 if (paymentResult.success === true) {
   window.location.assign(checkoutUrl.href);
@@ -1177,7 +1225,7 @@ const aiResult = await aiResponse.json();
 
 if (!aiResponse.ok || !aiResult.success) {
   console.error("AI CV preparation error:", aiResult);
-  alert("Your CV was saved, but AI preparation could not be completed.");
+  showNotification("Your CV was saved, but AI preparation could not be completed.");
   return;
 }
 
@@ -1188,7 +1236,7 @@ sessionStorage.setItem(
   JSON.stringify(aiResult.data)
 );
 
-alert(
+showNotification(
   "Your CV has been prepared successfully."
 );
 
@@ -1196,6 +1244,123 @@ router.push("/cv-preview");
 }
   return (
     <main className="min-h-screen bg-gray-100">
+{notification && (
+  <Notification
+    message={notification.message}
+    type={notification.type}
+    onClose={() => setNotification(null)}
+  />
+)}
+{cvProgress !== "idle" && (
+  <div
+    role="status"
+    aria-live="polite"
+    className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm"
+  >
+    <div className="w-full max-w-md rounded-3xl bg-white p-8 text-center shadow-2xl">
+      {cvProgress !== "error" ? (
+        <>
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-blue-50">
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-100 border-t-blue-700" />
+          </div>
+
+          <h2 className="text-2xl font-bold text-slate-900">
+            Preparing Your Professional CV
+          </h2>
+
+          <p className="mt-3 text-sm text-slate-600">
+            Please keep this page open while we prepare your documents.
+          </p>
+
+          <div className="mt-8 space-y-5 text-left">
+            {[
+              {
+                key: "verifying",
+                label: "Verifying Your Payment",
+              },
+              {
+                key: "generating",
+                label: "Generating Your Professional CV",
+              },
+              {
+                key: "preparing",
+                label: "Preparing Your CV Preview",
+              },
+            ].map((step, index) => {
+              const stages = [
+                "verifying",
+                "generating",
+                "preparing",
+              ];
+
+              const currentIndex = stages.indexOf(cvProgress);
+              const completed = index < currentIndex;
+              const active = index === currentIndex;
+
+              return (
+                <div
+                  key={step.key}
+                  className="flex items-center gap-3"
+                >
+                  <div
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
+                      completed
+                        ? "bg-green-100 text-green-700"
+                        : active
+                          ? "bg-blue-100 text-blue-700"
+                          : "bg-gray-100 text-gray-400"
+                    }`}
+                  >
+                    {completed ? "âœ“" : index + 1}
+                  </div>
+
+                  <span
+                    className={`text-sm ${
+                      active
+                        ? "font-semibold text-blue-700"
+                        : completed
+                          ? "text-green-700"
+                          : "text-gray-400"
+                    }`}
+                  >
+                    {step.label}
+                    {active ? "â€¦" : ""}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          <p className="mt-8 text-xs text-gray-500">
+            Please do not refresh or close this page.
+          </p>
+        </>
+      ) : (
+        <>
+          <h2 className="text-xl font-bold text-slate-900">
+            We Couldn't Complete Your CV
+          </h2>
+
+          <p className="mt-3 text-sm text-slate-600">
+            If you have already paid, do not pay again.
+            You can check your existing payment status.
+          </p>
+
+          <button
+            type="button"
+            onClick={() => {
+              setCvProgress("idle");
+              handleCheckCvPaymentStatus();
+            }}
+            className="mt-6 w-full rounded-xl bg-blue-700 px-5 py-3 font-semibold text-white hover:bg-blue-800"
+          >
+            Check Existing Payment Status
+          </button>
+        </>
+      )}
+    </div>
+  </div>
+)}
       <header className="border-b bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
           <a
@@ -1210,7 +1375,7 @@ router.push("/cv-preview");
             onClick={() => router.push("/dashboard")}
             className="rounded-lg border px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
           >
-            ← Dashboard
+            â† Dashboard
           </button>
         </div>
       </header>
@@ -1229,7 +1394,7 @@ router.push("/cv-preview");
             </p>
 
             <div className="mt-5 inline-block rounded-full bg-blue-100 px-4 py-2 font-bold text-blue-700">
-              Service Fee: ₦1,000
+              Service Fee: â‚¦1,000
             </div>
           </div>
 
@@ -1508,7 +1673,7 @@ router.push("/cv-preview");
 
                       <p className="mb-2 text-sm text-gray-500">
                         Write what you actually did in simple words. Don&apos;t
-                        worry about professional wording — AI will turn it into
+                        worry about professional wording â€” AI will turn it into
                         an ATS-friendly CV.
                       </p>
 
@@ -2050,7 +2215,7 @@ router.push("/cv-preview");
         checked={refereeMode === "provide"}
         onChange={() => setRefereeMode("provide")}
       />
-      <span>Provide Referee Details (2–3)</span>
+      <span>Provide Referee Details (2â€“3)</span>
     </label>
   </div>
 
@@ -2259,7 +2424,7 @@ router.push("/cv-preview");
               type="submit"
               className="w-full rounded-lg bg-blue-700 px-6 py-4 text-lg font-semibold text-white hover:bg-blue-800"
             >
-              Review My Information — ₦1,000
+              Review My Information â€” â‚¦1,000
             </button>
             <button
   type="button"
@@ -2278,6 +2443,153 @@ router.push("/cv-preview");
           </form>
         </div>
       </div>
+
+{showReviewModal && (
+  <div
+    className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+    role="presentation"
+  >
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="review-modal-title"
+      className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl sm:p-8"
+    >
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-green-100">
+        <svg
+          className="h-7 w-7 text-green-700"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 12l2 2 4-4m5 2a8 8 0 11-16 0 8 8 0 0116 0z"
+          />
+        </svg>
+      </div>
+
+      <h2
+        id="review-modal-title"
+        className="text-2xl font-bold text-gray-900"
+      >
+        Review Your Information
+      </h2>
+
+      <p className="mt-3 text-gray-600">
+        Before proceeding to payment, please confirm
+        that your CV information is correct.
+      </p>
+
+      <div className="mt-5 rounded-xl bg-gray-50 p-4">
+        <p className="text-sm font-semibold text-gray-800">
+          Please check:
+        </p>
+
+        <ul className="mt-3 space-y-2 text-sm text-gray-600">
+          <li>âœ“ Your full name and contact details</li>
+          <li>âœ“ Your education and qualifications</li>
+          <li>âœ“ Your work experience and skills</li>
+          <li>âœ“ Your target job title and description</li>
+        </ul>
+      </div>
+
+      <p className="mt-5 text-sm text-gray-600">
+        Your CV Builder fee is{" "}
+        <span className="font-bold text-green-700">
+          â‚¦1,000
+        </span>
+        . You will be redirected to secure Paystack
+        checkout after confirmation.
+      </p>
+
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+        <button
+          type="button"
+          onClick={() => setShowReviewModal(false)}
+          className="flex-1 rounded-xl border border-gray-300 px-5 py-3 font-semibold text-gray-700 hover:bg-gray-50"
+        >
+          Go Back & Edit
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            reviewConfirmedRef.current = true;
+            setShowReviewModal(false);
+
+            const form = document.querySelector(
+              "form"
+            );
+
+            form?.requestSubmit();
+          }}
+          className="flex-1 rounded-xl bg-green-700 px-5 py-3 font-semibold text-white hover:bg-green-800"
+        >
+          Confirm & Continue
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+{showReplaceJobModal && (
+  <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="replace-job-title"
+      className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl sm:p-8"
+    >
+      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-2xl text-amber-700">
+        !
+      </div>
+
+      <h2
+        id="replace-job-title"
+        className="text-xl font-bold text-gray-900"
+      >
+        Replace Job Description?
+      </h2>
+
+      <p className="mt-3 text-sm leading-6 text-gray-600">
+        Reading this job application link may replace your
+        existing job description.
+      </p>
+
+      <p className="mt-2 text-sm text-gray-600">
+        Your current description will remain unchanged
+        unless the new job information is loaded successfully.
+      </p>
+
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+        <button
+          type="button"
+          onClick={() => setShowReplaceJobModal(false)}
+          className="flex-1 rounded-xl border border-gray-300 px-5 py-3 font-semibold text-gray-700 hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+
+        <button
+          type="button"
+          disabled={isReadingJob}
+          onClick={() => {
+            setShowReplaceJobModal(false);
+            skipJobReplaceConfirmationRef.current = true;
+            void handleReadJobLink();
+          }}
+          className="flex-1 rounded-xl bg-blue-700 px-5 py-3 font-semibold text-white hover:bg-blue-800 disabled:opacity-50"
+        >
+          Replace & Continue
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </main>
   );
 }

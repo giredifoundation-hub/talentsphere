@@ -33,6 +33,7 @@ export default function AdminPage() {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [opportunityToDelete, setOpportunityToDelete] = useState<number | null>(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -205,15 +206,7 @@ setLoading(false);
 
   // DELETE
   async function deleteOpportunity(id: number) {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this opportunity?"
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    const { error } = await supabase
+  const { error } = await supabase
       .from("opportunities")
       .delete()
       .eq("id", id);
@@ -573,15 +566,13 @@ setLoading(false);
                         Edit
                       </button>
 
-                      <button
-                        type="button"
-                        onClick={() =>
-                          deleteOpportunity(opportunity.id)
-                        }
-                        className="rounded-lg bg-red-600 px-5 py-3 font-semibold text-white hover:bg-red-700"
-                      >
-                        Delete
-                      </button>
+            <button
+  type="button"
+  onClick={() => setOpportunityToDelete(opportunity.id)}
+  className="rounded-lg bg-red-600 px-5 py-3 font-semibold text-white hover:bg-red-700"
+>
+  Delete
+</button>
                     </div>
                   </div>
                 </article>
@@ -590,6 +581,55 @@ setLoading(false);
           )}
         </section>
       </div>
+
+{opportunityToDelete !== null && (
+  <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="delete-opportunity-title"
+      className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl sm:p-8"
+    >
+      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-2xl font-bold text-red-700">
+        !
+      </div>
+
+      <h2
+        id="delete-opportunity-title"
+        className="text-xl font-bold text-gray-900"
+      >
+        Delete Opportunity?
+      </h2>
+
+      <p className="mt-3 text-sm leading-6 text-gray-600">
+        Are you sure you want to delete this opportunity?
+        This action cannot be undone.
+      </p>
+
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+        <button
+          type="button"
+          onClick={() => setOpportunityToDelete(null)}
+          className="flex-1 rounded-xl border border-gray-300 px-5 py-3 font-semibold text-gray-700 hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+
+        <button
+          type="button"
+          onClick={async () => {
+            const id = opportunityToDelete;
+            setOpportunityToDelete(null);
+            await deleteOpportunity(id);
+          }}
+          className="flex-1 rounded-xl bg-red-700 px-5 py-3 font-semibold text-white hover:bg-red-800"
+        >
+          Confirm Delete
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </main>
   );
 }

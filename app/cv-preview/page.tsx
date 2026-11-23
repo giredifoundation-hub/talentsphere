@@ -1,5 +1,6 @@
 
 "use client";
+import Notification from "@/components/Notification";
 import { pdf } from "@react-pdf/renderer";
 import TalentSpherePDF from "./TalentSpherePDF";
 import { useEffect, useState } from "react";
@@ -69,7 +70,7 @@ export default function CVPreviewPage() {
   const [cv, setCv] = useState<CVData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
+const [pdfNotification, setPdfNotification] = useState("");
   useEffect(() => {
     async function loadCV() {
       try {
@@ -298,7 +299,7 @@ const downloadPDF = async (
        setTimeout(() => URL.revokeObjectURL(url), 1000);
   } catch (error) {
     console.error("PDF download failed:", error);
-    alert("Unable to download PDF. Please try again.");
+    setPdfNotification("Unable to download PDF. Please try again.");
   }
 };
 
@@ -327,6 +328,13 @@ const formatDate = (date: string | null) => {
 };
   return (
     <main className="min-h-screen bg-gray-100 px-4 py-10 text-gray-900">
+      {pdfNotification && (
+  <Notification
+    message={pdfNotification}
+    type="error"
+    onClose={() => setPdfNotification("")}
+  />
+)}
       <div className="mx-auto max-w-[850px] space-y-8">
 
         <div className="rounded-lg bg-white p-5 shadow-sm">
