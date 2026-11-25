@@ -5,7 +5,7 @@ export default function AboutPage() {
       <header className="border-b bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
           <a href="/" className="text-2xl font-bold text-blue-700">
-            OPPORTUNITY SPHERE
+            TalentSphere
           </a>
 
           <a
@@ -21,7 +21,7 @@ export default function AboutPage() {
       <section className="bg-blue-700 px-6 py-16 text-white">
         <div className="mx-auto max-w-4xl text-center">
           <h1 className="text-4xl font-bold md:text-5xl">
-            About OPPORTUNITY SPHERE
+            About TalentSphere
           </h1>
 
           <p className="mx-auto mt-5 max-w-2xl text-lg text-blue-100">
@@ -39,7 +39,7 @@ export default function AboutPage() {
             </h2>
 
             <p className="mt-4 leading-7 text-gray-600">
-              OPPORTUNITY SPHERE is an opportunity discovery platform designed to
+              TalentSphere is an opportunity discovery platform designed to
               help people find jobs, grants, scholarships, fellowships and
               other career and educational opportunities.
             </p>
@@ -115,7 +115,7 @@ export default function AboutPage() {
             </h2>
 
             <p className="mt-4 leading-7 text-gray-600">
-              OPPORTUNITY SPHERE provides opportunity information for discovery
+              TalentSphere provides opportunity information for discovery
               purposes. Visitors should always review the official
               organization website and application requirements before
               applying.
@@ -126,7 +126,7 @@ export default function AboutPage() {
 
       {/* Footer */}
       <footer className="bg-gray-900 px-6 py-10 text-center text-gray-400">
-        <p>© 2026 OPPORTUNITY SPHERE. All rights reserved.</p>
+        <p>© 2026 TalentSphere. All rights reserved.</p>
       </footer>
     </main>
   );

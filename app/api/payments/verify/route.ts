@@ -56,7 +56,7 @@ export async function POST(request: Request) {
 
     if (
       payment.service_type !== "cv_builder" ||
-      payment.amount_kobo !== CV_PRICE_KOBO ||
+      ![CV_PRICE_KOBO, 100_000].includes(payment.amount_kobo) ||
       payment.currency !== CV_CURRENCY
     ) {
       return Response.json(
@@ -85,7 +85,7 @@ if (payment.used_at !== null) {
     if (
   result.status !== true ||
   transaction?.reference !== reference ||
-  transaction?.amount !== CV_PRICE_KOBO ||
+  transaction?.amount !== payment.amount_kobo ||
   transaction?.currency !== CV_CURRENCY
 ) {
   return Response.json(

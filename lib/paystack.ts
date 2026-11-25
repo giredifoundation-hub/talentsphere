@@ -1,7 +1,7 @@
 
 const PAYSTACK_BASE_URL = "https://api.paystack.co";
 
-export const CV_PRICE_KOBO = 100_000; // ₦1,000
+export const CV_PRICE_KOBO = 50_000; // ₦500
 export const CV_CURRENCY = "NGN";
 
 export function getPaystackSecretKey(): string {

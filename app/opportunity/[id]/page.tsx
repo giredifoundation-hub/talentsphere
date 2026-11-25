@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
+import type { Metadata } from "next";
 
 type Opportunity = {
   id: number;
@@ -12,7 +13,68 @@ type Opportunity = {
   requirements: string;
   application_link: string;
 };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
 
+  const { data: opportunity, error } = await supabase
+    .from("opportunities")
+    .select("title, organization, category, location, description")
+    .eq("id", id)
+    .single();
+
+  if (error || !opportunity) {
+    return {
+      title: "Opportunity Not Found",
+      robots: {
+        index: false,
+        follow: false,
+      },
+    };
+  }
+
+  const title =
+    `${opportunity.title} - ${opportunity.organization}`;
+
+  const description = (
+    `${opportunity.title} at ${opportunity.organization}. ` +
+    `Location: ${opportunity.location}. ` +
+    opportunity.description
+  )
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 160);
+
+  const url =
+    `https://www.talentsphere.name.ng/opportunity/${id}`;
+
+  return {
+    title,
+    description,
+
+    alternates: {
+      canonical: url,
+    },
+
+    openGraph: {
+      title,
+      description,
+      url,
+      type: "website",
+      siteName: "TalentSphere",
+      locale: "en_NG",
+    },
+
+    twitter: {
+      card: "summary",
+      title,
+      description,
+    },
+  };
+}
 export default async function OpportunityPage({
   params,
 }: {
@@ -49,6 +111,11 @@ export default async function OpportunityPage({
     );
   }
 
+    const today = new Date().toLocaleDateString("en-CA", {
+    timeZone: "Africa/Lagos",
+  });
+
+  const isExpired = opportunity.deadline < today;
   return (
     <main className="min-h-screen bg-gray-50 text-gray-900">
       {/* Header */}
@@ -124,14 +191,33 @@ export default async function OpportunityPage({
             </div>
 
             <div className="mt-10 border-t pt-8">
-              <a
-                href={opportunity.application_link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block rounded-lg bg-blue-700 px-6 py-4 text-center text-lg font-bold text-white hover:bg-blue-800"
-              >
-                Apply on Official Website →
-              </a>
+              {isExpired ? (
+  <div className="rounded-lg border border-red-200 bg-red-50 px-6 py-4 text-center">
+    <p className="text-lg font-bold text-red-700">
+      Application Closed
+    </p>
+
+    <p className="mt-2 text-sm text-red-600">
+      The application deadline for this opportunity has passed.
+    </p>
+
+    <Link
+      href="/"
+      className="mt-4 inline-block font-semibold text-blue-700 hover:underline"
+    >
+      Explore Other Opportunities
+    </Link>
+  </div>
+) : (
+  <a
+    href={opportunity.application_link}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="block rounded-lg bg-blue-700 px-6 py-4 text-center text-lg font-bold text-white hover:bg-blue-800"
+  >
+    Apply on Official Website {"\u2192"}
+  </a>
+)}
 
               <p className="mt-3 text-center text-sm text-gray-500">
                 TalentSphere does not collect application fees.

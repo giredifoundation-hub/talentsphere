@@ -13,9 +13,58 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TalentSphere",
+  metadataBase: new URL(
+    "https://www.talentsphere.name.ng"
+  ),
+
+  title: {
+    default:
+      "TalentSphere | Jobs, Scholarships, Grants & AI CV Builder",
+    template: "%s | TalentSphere",
+  },
+
   description:
-    "TalentSphere - Find jobs, scholarships, grants, fellowships, internships, trainings and other opportunities.",
+    "Discover the latest jobs, scholarships, grants, fellowships and career opportunities in Nigeria and beyond. Create professional ATS-friendly CVs and cover letters with TalentSphere AI CV Builder.",
+
+  applicationName: "TalentSphere",
+
+  authors: [{ name: "TalentSphere" }],
+
+  creator: "TalentSphere",
+
+  publisher: "TalentSphere",
+
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
+
+  openGraph: {
+    type: "website",
+    locale: "en_NG",
+    siteName: "TalentSphere",
+    title:
+      "TalentSphere | Jobs, Scholarships, Grants & AI CV Builder",
+    description:
+      "Discover career opportunities, scholarships, grants and fellowships. Build professional ATS-friendly CVs and cover letters with TalentSphere.",
+  },
+
+  twitter: {
+    card: "summary",
+    title:
+      "TalentSphere | Jobs, Scholarships, Grants & AI CV Builder",
+    description:
+      "Discover opportunities and create professional ATS-friendly CVs with TalentSphere.",
+  },
+
+  category: "Career and Education",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

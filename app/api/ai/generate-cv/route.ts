@@ -482,7 +482,7 @@ if (paymentReserved !== true) {
     {
       success: false,
       error:
-        "A verified, unused ₦1,000 CV Builder payment is required.",
+        "A verified, unused CV Builder payment is required.",
     },
     { status: 402 }
   );

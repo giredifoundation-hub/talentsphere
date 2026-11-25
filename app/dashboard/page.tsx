@@ -103,7 +103,7 @@ export default function DashboardPage() {
               </h2>
 
               <span className="rounded-full bg-blue-100 px-3 py-1 text-sm font-bold text-blue-700">
-                ₦1,000
+                ₦500
               </span>
             </div>
 
@@ -116,7 +116,7 @@ export default function DashboardPage() {
   onClick={() => router.push("/cv-builder")}
   className="mt-6 w-full rounded-lg bg-blue-700 px-5 py-3 font-semibold text-white hover:bg-blue-800"
 >
-  Create CV — ₦1,000
+  Create CV — ₦500
 </button>
           </div>
 
