@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+
 import { supabase } from "@/lib/supabase";
 
 export default function SignupPage() {
-  const router = useRouter();
+
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -32,6 +32,7 @@ export default function SignupPage() {
       email,
       password,
       options: {
+        emailRedirectTo: "https://www.talentsphere.name.ng/email-verified",
         data: {
           full_name: fullName,
         },
@@ -44,15 +45,18 @@ export default function SignupPage() {
       return;
     }
 
+    if (data.session) {
+      window.location.assign("/dashboard");
+      return;
+    }
+
     setSuccess(
-      "Account created successfully. Please check your email if email verification is required."
+      "Check Your Email! Please check your inbox or spam folder for your verification link before signing in."
     );
 
     setLoading(false);
 
-    setTimeout(() => {
-      router.push("/login");
-    }, 2000);
+
   }
 
   return (
@@ -140,10 +144,10 @@ export default function SignupPage() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || Boolean(success)}
             className="w-full rounded-lg bg-blue-700 px-6 py-4 font-semibold text-white hover:bg-blue-800 disabled:opacity-50"
           >
-            {loading ? "Creating Account..." : "Create Account"}
+            {loading ? "Creating Account..." : success ? "Check Your Email" : "Create Account"}
           </button>
         </form>
 
