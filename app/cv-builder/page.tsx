@@ -2466,7 +2466,7 @@ router.push("/cv-preview");
               type="submit"
               className="w-full rounded-lg bg-blue-700 px-6 py-4 text-lg font-semibold text-white hover:bg-blue-800"
             >
-              Review My Information â€” â‚¦1,000
+              Review My Information {"\u2014"} {"\u20A6"}1,000
             </button>
             <button
   type="button"
@@ -2542,7 +2542,7 @@ router.push("/cv-preview");
       <p className="mt-5 text-sm text-gray-600">
         Your CV Builder fee is{" "}
         <span className="font-bold text-green-700">
-          â‚¦1,000
+          {"\u20A6"}1,000
         </span>
         . You will be redirected to secure Paystack
         checkout after confirmation.

@@ -36,6 +36,7 @@ export default function AdminPage() {
   const [opportunityToDelete, setOpportunityToDelete] = useState<number | null>(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
+const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   // CHECK LOGIN
   useEffect(() => {
@@ -58,19 +59,62 @@ if (adminError || isAdmin !== true) {
   return;
 }
 
+const { data: superAdmin, error: superAdminError } =
+  await supabase.rpc("is_super_admin");
+
+setIsSuperAdmin(
+  !superAdminError && superAdmin === true
+);
+
 await loadOpportunities();
-setLoading(false);
-    }
+setLoading(false);    }
 
     checkUser();
   }, [router]);
 
   // LOAD OPPORTUNITIES FROM SUPABASE
   async function loadOpportunities() {
-    const { data, error } = await supabase
-      .from("opportunities")
-      .select("*")
-      .order("id", { ascending: false });
+    const {
+  data: { user },
+  error: userError,
+} = await supabase.auth.getUser();
+
+if (userError || !user) {
+  setOpportunities([]);
+  saveMessage("Unable to verify your account.");
+  return;
+}
+
+const { data: isAdmin, error: adminError } =
+  await supabase.rpc("is_opportunities_admin");
+
+if (adminError || isAdmin !== true) {
+  setOpportunities([]);
+  saveMessage("Admin access denied.");
+  return;
+}
+
+const { data: superAdmin, error: roleError } =
+  await supabase.rpc("is_super_admin");
+
+if (roleError) {
+  setOpportunities([]);
+  saveMessage("Unable to verify admin permissions.");
+  return;
+}
+
+let query = supabase
+  .from("opportunities")
+  .select("*");
+
+if (superAdmin !== true) {
+  query = query.eq("created_by", user.id);
+}
+
+const { data, error } = await query.order(
+  "id",
+  { ascending: false }
+);
 
     if (error) {
       console.error("Load opportunities error:", error);
@@ -264,8 +308,17 @@ setLoading(false);
               href="/"
               className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-blue-700"
             >
-              View Website
+                            View Website
             </a>
+
+            {isSuperAdmin && (
+              <a
+                href="/admin/manage-admins"
+                className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
+              >
+                Manage Admins
+              </a>
+            )}
 
             <button
               type="button"
